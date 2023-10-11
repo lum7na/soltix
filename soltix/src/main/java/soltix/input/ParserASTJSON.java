@@ -20,12 +20,12 @@
 
 package soltix.input;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.*;
 
 import soltix.Configuration;
 import org.json.simple.JSONArray;
@@ -37,6 +37,8 @@ import soltix.ast.*;
  * Parser of Solidity code supplied in "--ast-json" solc JSON output format
  */
 public class ParserASTJSON extends Parser {
+    private final HashMap<String, ArrayList<String>> childAttr = new HashMap<>();
+
     protected void debugPrint(int depth, String s) {
         if (!Configuration.debugASTOutput) return;
 
@@ -85,7 +87,7 @@ public class ParserASTJSON extends Parser {
             throw new Exception("Function definition without visibility attribute");
         }
         String stateMutability = (String)attributes.get("stateMutability");
-        Boolean isConstructor = (Boolean)attributes.get("isConstructor");
+        Boolean isConstructor = "constructor".equals(attributes.get("kind"));
         Boolean isConstant = (Boolean)attributes.get("constant"); // note: does not exist (= null) in 0.5.x, TODO handle pure/view?
         if (isConstant == null) {
             isConstant = Boolean.valueOf(false);
@@ -221,7 +223,7 @@ public class ParserASTJSON extends Parser {
     }
 
     protected void processIdentifier(long id, AST ast, JSONObject attributes) throws Exception {
-        String name = (String)attributes.get("value");
+        String name = (String)attributes.get("name");
         if (name == null) {
             throw new Exception("Identifier name not defined for src  " + (String)attributes.get("src"));
         }
@@ -256,7 +258,7 @@ public class ParserASTJSON extends Parser {
     }
 
     protected void processFunctionCall(long id, AST ast, JSONObject attributes) throws Exception {
-        Boolean isStructConstructorCall = (Boolean)attributes.get("isStructConstructorCall");
+        Boolean isStructConstructorCall = ((String)attributes.get("kind") == "constructor");
         ArrayList<String> argumentNames = getOptionalArgumentNames(attributes);
         ast.addInnerNode(new ASTFunctionCall(id, isStructConstructorCall, argumentNames));
     }
@@ -296,7 +298,7 @@ public class ParserASTJSON extends Parser {
     }
 
     protected void processVariableDeclaration(long id, AST ast, String name, JSONObject attributes) throws Exception {
-        String type = (String)attributes.get("type");
+        String type = (String)((JSONObject)attributes.get("typeDescriptions")).get("typeString");
         if (type == null) {
             throw new Exception("Variable declaration without type attribute");
         }
@@ -312,8 +314,8 @@ public class ParserASTJSON extends Parser {
 
     protected void processLiteral(long id, AST ast, JSONObject attributes) throws Exception {
         String value = (String)attributes.get("value");
-        String type = (String)attributes.get("type");
-        String token = (String)attributes.get("token");
+        String type = (String)(((JSONObject)attributes.get("typeDescriptions")).get("typeString"));
+        String token = (String)attributes.get("kind");
         String subdenomination = (String)attributes.get("subdenomination");
 
         ASTLiteral.LiteralType literalType = null;
@@ -388,7 +390,15 @@ public class ParserASTJSON extends Parser {
         ast.addInnerNode(new ASTMemberAccess(id, memberName, referencedDeclarationId == null? 0: (long)referencedDeclarationId));
     }
 
-    protected void processUserDefinedTypeName(long id, AST ast, String name) throws Exception {
+    protected void processUserDefinedTypeName(long id, AST ast, JSONObject attributes) throws Exception {
+        JSONObject pathNode = (JSONObject) attributes.get("pathNode");
+        if (pathNode == null) {
+            throw new Exception("Member access has no pathNode attribute");
+        }
+        String name = (String) pathNode.get("name");
+        if (name == null) {
+            throw new Exception("PathNode access has no name attribute");
+        }
         ast.addInnerNode(new ASTUserDefinedTypeName(id, name));
     }
 
@@ -547,7 +557,8 @@ public class ParserASTJSON extends Parser {
     private byte [] codeArray = null;
 
     protected void processJSONObject(AST ast, JSONObject jsonObject, int depth) throws Exception {
-        JSONObject attributes = (JSONObject)jsonObject.get("attributes");
+        // JSONObject attributes = (JSONObject)jsonObject.get("attributes");
+        JSONObject attributes = (JSONObject)jsonObject;
 
         // Identify current item - name stored as part of the attributes
         String itemName = null;
@@ -556,7 +567,7 @@ public class ParserASTJSON extends Parser {
         long id;
         String code = null;
 
-        itemName = (String)jsonObject.get("name");
+        itemName = (String)jsonObject.get("nodeType");
         id = (Long)jsonObject.get("id");
         if (attributes != null) {
             attrName = (String)attributes.get("name");
@@ -581,6 +592,7 @@ public class ParserASTJSON extends Parser {
         }
 
         // Process current item
+        System.out.println(itemName);
         if (nameEquals(itemName, "PragmaDirective")) {
             processPragmaDirective(id, ast, attributes);
         } else if (nameEquals(itemName, "UsingForDirective")) {
@@ -666,7 +678,7 @@ public class ParserASTJSON extends Parser {
         } else if (nameEquals(itemName, "ArrayTypeName")) {
             processArrayTypeName(id, ast);
         } else if (nameEquals(itemName, "UserDefinedTypeName")) {
-            processUserDefinedTypeName(id, ast, attrName);
+            processUserDefinedTypeName(id, ast, attributes);
         } else if (nameEquals(itemName, "ModifierDefinition")) {
             processModifierDefinition(id, ast, jsonObject, attrName);
         } else if (nameEquals(itemName, "FunctionTypeName")) {
@@ -692,14 +704,35 @@ public class ParserASTJSON extends Parser {
 
 
         // Process child nodes
-        JSONArray children = (JSONArray)jsonObject.get("children");
+        JSONArray children = (JSONArray)jsonObject.get("nodes");
         if (children == null) {
-            debugPrint(depth, "no children");
+            String nodeType = (String) jsonObject.get("nodeType");
+            if (childAttr.get(nodeType) != null) {
+                for (String value : childAttr.get(nodeType)) {
+                    if (jsonObject.get(value) == null) {
+                        continue;
+                    }
+                    if (jsonObject.get(value) instanceof JSONArray) {
+                        JSONArray childArray = (JSONArray) jsonObject.get(value);
+                        childArray.forEach((childObject) -> {
+                            try {
+                                JSONObjectToAST(ast, (JSONObject) childObject, depth + 1);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+                    } else {
+                        JSONObject childObject = (JSONObject) jsonObject.get(value);
+                        JSONObjectToAST(ast, childObject, depth + 1);
+                    }
+                }
+            }
         } else {
             for (int i = 0; i < children.size(); ++i) {
                 JSONObject childObject = (JSONObject)children.get(i);
                 JSONObjectToAST(ast, childObject, depth+1);
             }
+
         }
 
         if (ast != null) {
@@ -723,7 +756,26 @@ public class ParserASTJSON extends Parser {
         JSONObject jsonObject = (JSONObject)jsonParser.parse(
                 new InputStreamReader(input, "UTF-8"));
 
+        if (Configuration.debugASTJson) {
+            FileWriter fileWriter = new FileWriter("_tmp/pretty-ast.json");
+            BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+            bufferedWriter.write(jsonObject.toJSONString());
+            System.out.println("Write pretty-ast.json");
+            bufferedWriter.close();
+            fileWriter.close();
+        }
+
         AST ast = new AST();
+
+
+        childAttr.put("FunctionDefinition", new ArrayList<>(Arrays.asList("returnParameters", "parameters", "body")));
+        childAttr.put("VariableDeclaration", new ArrayList<>(Arrays.asList("typeName", "value")));
+        childAttr.put("EventDefinition", new ArrayList<>(Arrays.asList("parameters")));
+        childAttr.put("ParameterList", new ArrayList<>(Arrays.asList("parameters")));
+        childAttr.put("Block", new ArrayList<>(Arrays.asList("statements")));
+        childAttr.put("VariableDeclarationStatement", new ArrayList<>(Arrays.asList("declarations")));
+        childAttr.put("EmitStatement", new ArrayList<>(Arrays.asList("eventCall")));
+        childAttr.put("FunctionCall", new ArrayList<>(Arrays.asList("expression", "arguments")));
 
         if (!Configuration.skipASTProcessing) {
             // Process JSON object to build AST

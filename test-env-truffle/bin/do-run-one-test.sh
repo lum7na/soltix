@@ -198,8 +198,8 @@ RUN_FRAMEWORK_ARGS="$TESTDIR"
 INPUT_DIR_RESULT_PATH="$TESTDIR"/results
 PROFILING_LOG_PATH="$INPUT_DIR_RESULT_PATH"/profiling-events.log
 
-
 RESULT_DIR="$PATH_MAIN_RESULTS_DIR"
+echo $RESULT_DIR
 rm -rf "$RESULT_DIR"
 echo Creating "$RESULT_DIR"
 mkdir -p "$RESULT_DIR"
@@ -329,7 +329,6 @@ fi
 cp "$TESTDIR/migrations/2_deploy_contracts.js" "$RESULT_DIR"
 
 
-
 if test "$HAVE_TX_FILE" != ""; then
 	if ! test -f "$HAVE_TX_FILE"; then
 		echo "Error: Transactions file $HAVE_TX_FILE does not exist"
@@ -395,6 +394,7 @@ cp "$TESTDIR/test/test.js" "$RESULT_DIR"
 
 
 error() {
+	# shellcheck disable=SC2145
 	echo "ERROR: $@"
 	exit 1
 }
@@ -409,6 +409,8 @@ run_contract() {
 
 	rm -f "$PROFILING_LOG_PATH"
 	cp "$PROJECT_CONTRACT_FILE" "$RESULT_DIR"/"$1".sol
+	echo "RUN FRAMEWORK"
+	echo "${RUN_FRAMEWORK_CMD} ${RUN_FRAMEWORK_ARGS}"
 	"$RUN_FRAMEWORK_CMD" "$RUN_FRAMEWORK_ARGS"
 	RC=$?
 
@@ -584,6 +586,7 @@ elif test "$DEBUG_INPUT" = yes; then
 	fi
 else
 	    #--solidityOutput="$PROJECT_CONTRACT_FILE" \
+	echo "run-soltix.sh "${RESULT_DIR}"/original.sol --solidityOutput=\"${PWD}/mutated#.sol\" --replay="${RESULT_DIR}"/instrumented-profiling-log.log --applyLiveEMIMutations=${MUTATIONS_COUNT}"
 	if ! run-soltix.sh "$RESULT_DIR"/original.sol \
 	    --solidityOutput="$PWD/mutated#.sol" \
 	    --replay="$RESULT_DIR"/instrumented-profiling-log.log \

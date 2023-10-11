@@ -28,7 +28,6 @@ if ! test "$?" = 0; then
         exit 1
 fi
 
-
 if test "$#" != 2; then
         echo Invalid argument count "$#"
         usage

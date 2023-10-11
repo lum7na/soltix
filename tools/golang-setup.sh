@@ -7,12 +7,12 @@ fi
 
 INSTALL_DIR="$1"
 
-if ! wget https://dl.google.com/go/go1.12.4.linux-amd64.tar.gz; then
+if ! wget https://dl.google.com/go/go1.20.linux-amd64.tar.gz; then
 	echo Error: go download failed
 	exit 1
 fi
 
-if ! mkdir -p "$INSTALL_DIR" || ! tar -C "$INSTALL_DIR" -xzf go1.12.4.linux-amd64.tar.gz; then
+if ! mkdir -p "$INSTALL_DIR" || ! tar -C "$INSTALL_DIR" -xzf go1.20.linux-amd64.tar.gz; then
 	echo 'Error: Cannot unpack go to '$INSTALL_DIR'. If this is a permissions problem,'
 	echo '       you can unpack to a temp directory and "sudo mv" it to the desired'
 	echo 'location.'

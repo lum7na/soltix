@@ -71,10 +71,8 @@ else
 fi
 	
 
-
-TRUFFLE_DIR="$BIN_DIR"/../node_modules/.bin
-TRUFFLE_FILE="$TRUFFLE_DIR"/truffle
-TRUFFLE_BACKUP="$TRUFFLE_DIR"/truffle.old
+TRUFFLE_FILE="$TRUFFLE_CONFIG_DIR"/truffle-geth.js
+TRUFFLE_BACKUP="$TRUFFLE_CONFIG_DIR"/truffle-geth-old.js
 
 # Create backup
 rm -rf "$TRUFFLE_BACKUP"
@@ -154,6 +152,7 @@ change_setting() {
 	fi
 }
 
+echo $TRUFFLE_FILE
 if test "$DESIRED_SETTING" = on; then
 	if test "$ONLY_PRINT" = yes; then
 		echo \"enabled\": true,        >$OPT_SETTINGS_FILE

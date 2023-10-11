@@ -17,7 +17,11 @@ fi
 # timestamp to minimize (but not avoid 100%) race conditions for now
 AST_FILE_PATH=/tmp/solc.ast-`date '+%s'`
 AST_ERR_PATH=/tmp/solc.err-`date '+%s'`
-if ! "$SOLC_BINARY_PATH" --ast-json $INPUT >$AST_FILE_PATH 2>$AST_ERR_PATH; then
+echo $AST_FILE_PATH
+echo $SOLC_BINARY_PATH
+
+# --ast-json removed in 0.8.0
+if ! "$SOLC_BINARY_PATH" --ast-compact-json $INPUT >$AST_FILE_PATH 2>$AST_ERR_PATH; then
 	cat $AST_ERR_PATH 
 	rm -f "$AST_FILE_PATH" "$AST_ERR_PATH"
 	echo Error: solc failed, see output above

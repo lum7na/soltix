@@ -24,7 +24,7 @@ init() {
         mkdir -p "$GETH_KEYSTORE_LIVE"
         cp -R "$GETH_KEYSTORE_SOURCE"/* "$GETH_KEYSTORE_LIVE"/
         # Initialize local geth blockchain
-        "$GETH_PATH" --datadir "$GETH_DATADIR" init "$GETH_CONFIG" 
+        "$GETH_PATH" --datadir "$GETH_DATADIR" init "$GETH_GENESIS_CONFIG" 
 }
 
 start() {
@@ -46,9 +46,9 @@ start() {
 	#     - afterwards geth.log appears to indicate successfuly deployment, but there's still an
 	# error
         "$GETH_PATH" --port 3000 --networkid 58343 \
-                --mine --minerthreads=1 --etherbase '0xa4d8e9cae4d04b093aac82e6cd355b6b963fb7ff' \
+                --mine --miner.threads=1 --miner.etherbase '0xa4d8e9cae4d04b093aac82e6cd355b6b963fb7ff' \
                 --allow-insecure-unlock --unlock '854c55d65bf425569263d5fae98d01bd7a96fd3c' --password "$GETH_KEYSTORE_LIVE"/password.txt \
-                --nodiscover --datadir="$GETH_DATADIR" --maxpeers=0  --rpc --rpcport 8543 --rpcaddr 127.0.0.1 --rpccorsdomain "*" --rpcapi "eth,net,web3,personal,miner"
+                --nodiscover --datadir="$GETH_DATADIR" --maxpeers=0  --http --http.port 8543 --http.addr 127.0.0.1 --http.corsdomain  "*" --http.api "eth,net,web3,personal,miner"
 }
 
 if pgrep -f "$GETH_PATH"; then

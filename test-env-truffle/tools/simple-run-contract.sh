@@ -202,7 +202,6 @@ run_truffle_test() {
 	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" test test/test.js --network test --migrations_directory "$DUMMY_MIGRATIONS_DIR" >TruffleTest.log 2>&1
 }
 
-
 # Start local test blockchain backend
 case $BLOCKCHAIN_BACKEND in
 	ganache)
@@ -219,7 +218,6 @@ if test "$?" != 0; then
 	echo Error: blockchain startup error
 	exit 1
 fi
-
 
 # Deploy and run tests
 run_truffle_test

@@ -19,7 +19,7 @@
 GENERATED_SETTINGS_FILE="settings.cfg.sh"
 
 # Cleanup in case of reinstallation
-rm -rf go-ethereum
+# rm -rf go-ethereum
 rm -rf test-env-truffle/node_modules
 
 verify_solc_path() {
@@ -115,7 +115,7 @@ INSTALLED_SOLC=`whereis solc | awk '{print $2}'`
 
 # 1. Select compiler binary - using the current solc static binary as initial suggestion
 # TODO use truffle external compiler function to reference the selected binary as well
-SOLC_VERSION_5="0.5.9"
+SOLC_VERSION_8="0.8.21"
 
 USER_INPUT=""
 
@@ -129,7 +129,7 @@ echo Generated code currently always complies with 0.5 language rules and does n
 echo 0.4 language-specific constructs anymore.
 echo
 while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
-	printf "Download static solc binary version ${SOLC_VERSION_5} now? [y]: " 
+	printf "Download static solc binary version ${SOLC_VERSION_8} now? [y]: "
 	if test "$USE_DEFAULTS" != yes; then
 		read USER_INPUT
 	fi
@@ -143,12 +143,12 @@ if test "$USER_INPUT" = y; then
 		echo Using solc from builddeps dir
 		INSTALLED_SOLC="$BUILDDEPS"/solc
 	else	
-		echo Downloading default solc compiler binary $SOLC_VERSION_5 ...
-		if ! wget https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION_5}/solc-static-linux -O solc-${SOLC_VERSION_5} >/dev/null 2>&1; then
-			echo Error: could not download solc compiler binary
-		else
-			INSTALLED_SOLC=$PWD/solc-${SOLC_VERSION_5}
-		fi
+		echo Downloading default solc compiler binary $SOLC_VERSION_8 ...
+		# if ! wget https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION_8}/solc-static-linux -O solc-${SOLC_VERSION_8} >/dev/null 2>&1; then
+		#	  echo Error: could not download solc compiler binary
+		# else
+		INSTALLED_SOLC=$PWD/solc-${SOLC_VERSION_8}
+		# fi
 	fi
 	chmod +x "$INSTALLED_SOLC"
 fi
@@ -188,7 +188,8 @@ done
 
 
 # 2. Select a node version. Try to find a default option first 
-SELECTED_NODE_DIR=/usr/local/bin
+# SELECTED_NODE_DIR=/usr/local/bin
+SELECTED_NODE_DIR=/home/lum7na/.nvm/versions/node/v18.18.0/bin/
 if ! verify_nodejs_path; then
 	SELECTED_NODE_DIR=/usr/bin
 	if verify_nodejs_path; then
@@ -233,10 +234,10 @@ if ! "$SELECTED_NODE_DIR"/npm install >"$NPMLOG" 2>&1; then
 fi
 
 # Patch truffle for external compiler invocation
-if ! ../tools/patch-truffle.sh ./node_modules/.bin/truffle; then
-	echo Error: Cannot patch truffle - aborting setup
-	exit 1
-fi
+# if ! ../tools/patch-truffle.sh ./node_modules/.bin/truffle; then
+# 	echo Error: Cannot patch truffle - aborting setup
+# 	exit 1
+# fi
 
 
 # 3. Obtain geth blockchain client if desired
@@ -261,7 +262,7 @@ if test "$USER_INPUT" = y; then
 			mkdir "$GOLANG_DIR"
 		fi
 		tar -C "$GOLANG_DIR" -xzf "$BUILDDEPS"/go.tgz 
-		export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
+		export PATH="`realpath $GOLANG_DIR/go/bin`:$PATH"
 	elif ! which go; then
 		# Only advise on installation
 		echo 'Error: cannot find go binary. Binary installation in ./go on Linux'
@@ -280,7 +281,7 @@ if test "$USER_INPUT" = y; then
 				fi
 			done
 			if ./tools/golang-setup.sh "$GOLANG_DIR"; then
-				export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
+				export PATH="`realpath $GOLANG_DIR/go/bin`:$PATH"
 			fi
 		fi
 	fi
@@ -292,20 +293,20 @@ if test "$USER_INPUT" = y; then
 	else
 		if test -d "$BUILDDEPS"/go-ethereum; then
 			echo Using go-ethereum from builddeps dir
-			rm -rf go-ethereum
-			cp -R "$BUILDDEPS"/go-ethereum go-ethereum
+			## rm -rf go-ethereum
+			## cp -R "$BUILDDEPS"/go-ethereum go-ethereum
 		fi
 
 		cd go-ethereum
-		if ! ../tools/patch-geth.sh; then
-			echo Error: Cannot patch geth code - aborting geth setup
-		else
-			if ! make all; then
-				echo Error: make all failed - aborting geth setup
-			else
-				cd ..
-				GETH_PATH=`realpath ./go-ethereum/build/bin/geth`
-			fi
+		# if ! ../tools/patch-geth.sh; then
+		# 	echo Error: Cannot patch geth code - aborting geth setup
+		# else
+		go env -w  GOPROXY=https://goproxy.cn,direct
+    if ! make all; then
+      echo Error: make all failed - aborting geth setup
+    else
+      cd ..
+      GETH_PATH=`realpath ./go-ethereum/build/bin/geth`
 		fi
 	fi
 fi
@@ -323,7 +324,7 @@ echo "export SOLCJS_VERSION=\"0.5.7\""                                          
 echo "# if USE_SOLCJS=no - absolute path of solc binary to use (see https://github.com/ethereum/solidity/releases for static Linux release binaries)" >>"$GENERATED_SETTINGS_FILE"
 echo "export SOLC_BINARY_PATH=\"$SELECTED_COMPILER\""                                                          >>"$GENERATED_SETTINGS_FILE"
 echo "# blockchain backend to use - ganache or geth?"                                                          >>"$GENERATED_SETTINGS_FILE"
-echo "export BLOCKCHAIN_BACKEND=ganache"                                                                       >>"$GENERATED_SETTINGS_FILE"
+echo "export BLOCKCHAIN_BACKEND=geth"                                                                          >>"$GENERATED_SETTINGS_FILE"
 echo "# geth binary path to use if BLOCKCHAIN_BACKEND=geth"                                                    >>"$GENERATED_SETTINGS_FILE"
 echo "export GETH_PATH=\"$GETH_PATH\""                                                                         >>"$GENERATED_SETTINGS_FILE"
 echo "# enable optimization?  will update truffle's  'optimizer { enabled:'  setting   "                       >>"$GENERATED_SETTINGS_FILE"

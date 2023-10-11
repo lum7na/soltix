@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 public class Configuration {
     // Print structured AST-JSON output for debugging
     static public boolean debugASTOutput = false;
+    static public boolean debugASTJson = true;
     // Don't build AST - only print AST-JSON input (avoids stopping on errors)
     static public boolean skipASTProcessing = false;
     static public String debugGraphOutputFile = null;

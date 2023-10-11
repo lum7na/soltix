@@ -366,6 +366,7 @@ public class Driver {
             }
             printWriter.flush();
             file.close();
+
         } catch (Exception e) {
             logger.error("Cannot output top-level contract: " + e.toString());
             e.printStackTrace();
